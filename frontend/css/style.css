@@ -677,7 +677,8 @@ img {
   color: var(--muted);
   font-size: 0.95rem;
 }
-.mobile-nav {
+.mobile-nav,
+.mobile-drawer {
   display: none;
 }
 
