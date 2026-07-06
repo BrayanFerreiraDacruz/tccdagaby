@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Entrar · Study Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="auth-wrap">
+      <!-- Lateral ilustrativa -->
+      <div class="auth-side">
+        <a href="index.html" class="brand">
+          <span class="brand-logo">⏱️</span> Study<span>Time</span>
+        </a>
+        <div class="auth-side-content">
+          <h2>Estude para o ENEM de forma organizada e gratuita.</h2>
+          <p>
+            Questões oficiais, cronograma personalizado e acompanhamento do seu
+            progresso em um só lugar.
+          </p>
+          <ul>
+            <li><span class="check">✓</span> 2.700+ questões reais do ENEM</li>
+            <li><span class="check">✓</span> Cronograma de estudos semanal</li>
+            <li><span class="check">✓</span> Relatórios de desempenho</li>
+            <li><span class="check">✓</span> 100% gratuito</li>
+          </ul>
+        </div>
+        <p style="opacity: 0.8; font-size: 0.85rem">
+          © Study Time — Projeto Integrador
+        </p>
+      </div>
+
+      <!-- Formulários -->
+      <div class="auth-main">
+        <div class="auth-box">
+          <h1 id="title">Bem-vindo(a) de volta 👋</h1>
+          <p class="sub" id="subtitle">Entre para continuar seus estudos.</p>
+
+          <div class="auth-tabs">
+            <button id="tab-login" class="active" onclick="switchTab('login')">
+              Entrar
+            </button>
+            <button id="tab-register" onclick="switchTab('register')">
+              Criar conta
+            </button>
+          </div>
+
+          <div class="error-msg" id="error"></div>
+
+          <!-- LOGIN -->
+          <form id="form-login" onsubmit="return doLogin(event)">
+            <div class="field">
+              <label>E-mail</label>
+              <input type="email" name="email" required placeholder="seu@email.com" />
+            </div>
+            <div class="field">
+              <label>Senha</label>
+              <input type="password" name="password" required placeholder="••••••••" />
+            </div>
+            <button class="btn btn-primary btn-block" type="submit" id="btn-login">
+              Entrar
+            </button>
+          </form>
+
+          <!-- CADASTRO -->
+          <form id="form-register" style="display: none" onsubmit="return doRegister(event)">
+            <div class="field">
+              <label>Nome completo</label>
+              <input type="text" name="name" required placeholder="Seu nome" />
+            </div>
+            <div class="field">
+              <label>E-mail</label>
+              <input type="email" name="email" required placeholder="seu@email.com" />
+            </div>
+            <div class="field">
+              <label>Senha</label>
+              <input
+                type="password"
+                name="password"
+                required
+                minlength="6"
+                placeholder="Mínimo de 6 caracteres"
+              />
+            </div>
+            <button class="btn btn-primary btn-block" type="submit" id="btn-register">
+              Criar conta gratuita
+            </button>
+          </form>
+
+          <p style="text-align: center; margin-top: 1.5rem; color: var(--muted); font-size: 0.9rem">
+            <a href="index.html" style="color: var(--primary); font-weight: 600"
+              >← Voltar ao início</a
+            >
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+      if (Session.isLogged) location.href = "dashboard.html";
+
+      const errorBox = document.getElementById("error");
+
+      function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.classList.add("show");
+      }
+      function clearError() {
+        errorBox.classList.remove("show");
+      }
+
+      function switchTab(tab) {
+        clearError();
+        const isLogin = tab === "login";
+        document.getElementById("tab-login").classList.toggle("active", isLogin);
+        document
+          .getElementById("tab-register")
+          .classList.toggle("active", !isLogin);
+        document.getElementById("form-login").style.display = isLogin
+          ? "block"
+          : "none";
+        document.getElementById("form-register").style.display = isLogin
+          ? "none"
+          : "block";
+        document.getElementById("title").textContent = isLogin
+          ? "Bem-vindo(a) de volta 👋"
+          : "Crie sua conta gratuita 🚀";
+        document.getElementById("subtitle").textContent = isLogin
+          ? "Entre para continuar seus estudos."
+          : "Leva menos de um minuto para começar.";
+      }
+
+      async function doLogin(e) {
+        e.preventDefault();
+        clearError();
+        const btn = document.getElementById("btn-login");
+        const data = Object.fromEntries(new FormData(e.target));
+        btn.disabled = true;
+        btn.textContent = "Entrando...";
+        try {
+          const res = await API.login(data);
+          Session.set(res);
+          location.href = "dashboard.html";
+        } catch (err) {
+          showError(err.message);
+          btn.disabled = false;
+          btn.textContent = "Entrar";
+        }
+        return false;
+      }
+
+      async function doRegister(e) {
+        e.preventDefault();
+        clearError();
+        const btn = document.getElementById("btn-register");
+        const data = Object.fromEntries(new FormData(e.target));
+        btn.disabled = true;
+        btn.textContent = "Criando conta...";
+        try {
+          const res = await API.register(data);
+          Session.set(res);
+          location.href = "dashboard.html";
+        } catch (err) {
+          showError(err.message);
+          btn.disabled = false;
+          btn.textContent = "Criar conta gratuita";
+        }
+        return false;
+      }
+
+      // Abre na aba de cadastro se ?modo=cadastro
+      if (new URLSearchParams(location.search).get("modo") === "cadastro") {
+        switchTab("register");
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minha conta · Study Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="mobile-shell"></div>
+    <div class="app">
+      <div id="shell"></div>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <h1>Minha conta</h1>
+            <p>Gerencie seus dados pessoais e as configurações da sua conta.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <!-- Editar dados -->
+          <div class="card">
+            <div class="card-title">Dados pessoais</div>
+            <div class="error-msg" id="error"></div>
+            <form id="form" onsubmit="return saveProfile(event)">
+              <div class="field">
+                <label>Nome completo</label>
+                <input type="text" name="name" required />
+              </div>
+              <div class="field">
+                <label>E-mail</label>
+                <input type="email" name="email" required />
+              </div>
+              <div class="field">
+                <label>Nova senha (deixe em branco para manter)</label>
+                <input type="password" name="password" minlength="6" placeholder="••••••••" />
+              </div>
+              <button class="btn btn-primary" type="submit" id="btn-save">
+                Salvar alterações
+              </button>
+            </form>
+          </div>
+
+          <!-- Zona de perigo -->
+          <div class="card" style="align-self: start">
+            <div class="card-title">Sessão e conta</div>
+            <p style="color: var(--ink-soft); font-size: 0.92rem; margin-bottom: 1.2rem">
+              Você pode sair da sua conta a qualquer momento. Ao excluir a conta,
+              todos os seus cronogramas e registros de desempenho serão apagados
+              permanentemente.
+            </p>
+            <button class="btn btn-ghost btn-block" onclick="logout()" style="margin-bottom: 0.8rem">
+              Sair da conta
+            </button>
+            <button class="btn btn-danger btn-block" onclick="deleteAccount()">
+              Excluir minha conta
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+      if (!requireAuth()) throw new Error("redirect");
+      renderShell("conta.html");
+
+      const form = document.getElementById("form");
+      const errorBox = document.getElementById("error");
+
+      async function loadProfile() {
+        try {
+          const { user } = await API.me();
+          Session.updateUser(user);
+          form.name.value = user.name;
+          form.email.value = user.email;
+        } catch (err) {
+          const u = Session.user;
+          form.name.value = u.name;
+          form.email.value = u.email;
+        }
+      }
+
+      async function saveProfile(e) {
+        e.preventDefault();
+        errorBox.classList.remove("show");
+        const data = Object.fromEntries(new FormData(form));
+        if (!data.password) delete data.password;
+
+        const btn = document.getElementById("btn-save");
+        btn.disabled = true;
+        btn.textContent = "Salvando...";
+        try {
+          const { user } = await API.updateMe(data);
+          Session.updateUser(user);
+          form.password.value = "";
+          renderShell("conta.html");
+          toast("Dados atualizados com sucesso!", "ok");
+        } catch (err) {
+          errorBox.textContent = err.message;
+          errorBox.classList.add("show");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Salvar alterações";
+        }
+        return false;
+      }
+
+      async function deleteAccount() {
+        if (
+          !confirm(
+            "Tem certeza que deseja excluir sua conta? Esta ação é irreversível."
+          )
+        )
+          return;
+        try {
+          await API.deleteMe();
+          Session.clear();
+          alert("Sua conta foi excluída. Sentiremos sua falta!");
+          location.href = "index.html";
+        } catch (err) {
+          toast(err.message, "err");
+        }
+      }
+
+      loadProfile();
+    </script>
+  </body>
+</html>

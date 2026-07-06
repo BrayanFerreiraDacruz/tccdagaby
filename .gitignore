@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Ambiente / segredos
+backend/.env
+*.env
+!backend/.env.example
+
+# Banco de dados local (SQLite fallback)
+backend/study_time.db
+*.sqlite3
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Sistema
+.DS_Store
+Thumbs.db
+node_modules/

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel · Study Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="mobile-shell"></div>
+    <div class="app">
+      <div id="shell"></div>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <h1 id="greet">Olá! 👋</h1>
+            <p>Este é o seu painel de estudos. Bons estudos!</p>
+          </div>
+          <a href="questoes.html" class="btn btn-primary">Praticar questões →</a>
+        </div>
+
+        <!-- Estatísticas rápidas -->
+        <div class="grid grid-4" id="stats" style="margin-bottom: 1.3rem">
+          <div class="loader-center" style="grid-column: 1/-1">
+            <span class="loader"></span>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <!-- Desempenho por área -->
+          <div class="card">
+            <div class="card-title">
+              Desempenho por área
+              <a href="desempenho.html" class="btn btn-ghost btn-sm">Ver mais</a>
+            </div>
+            <div id="disciplines">
+              <div class="empty">
+                <div class="empty-ic">📊</div>
+                Resolva questões para ver seu desempenho aqui.
+              </div>
+            </div>
+          </div>
+
+          <!-- Próximos blocos de estudo -->
+          <div class="card">
+            <div class="card-title">
+              Sua rotina de hoje
+              <a href="cronograma.html" class="btn btn-ghost btn-sm">Editar</a>
+            </div>
+            <div id="today">
+              <div class="loader-center"><span class="loader"></span></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+      if (!requireAuth()) throw new Error("redirect");
+      renderShell("dashboard.html");
+
+      const user = Session.user;
+      document.getElementById("greet").textContent = `Olá, ${
+        user.name.split(" ")[0]
+      }! 👋`;
+
+      function statCard(tone, icon, value, label) {
+        return `<div class="card stat-card">
+          <div class="stat-ic ${tone}">${icon}</div>
+          <div><b>${value}</b><span>${label}</span></div>
+        </div>`;
+      }
+
+      async function loadStats() {
+        try {
+          const s = await API.summary();
+          document.getElementById("stats").innerHTML =
+            statCard("tone-primary", "📝", s.total, "Questões resolvidas") +
+            statCard("tone-accent", "✓", s.correct, "Acertos") +
+            statCard("tone-danger", "✕", s.wrong, "Erros") +
+            statCard("tone-warning", "🎯", s.accuracy + "%", "Taxa de acerto");
+
+          const disc = document.getElementById("disciplines");
+          if (s.disciplines.length) {
+            disc.innerHTML = s.disciplines
+              .map(
+                (d) => `
+              <div class="disc-row">
+                <div class="disc-head">
+                  <b>${d.label}</b><span>${d.correct}/${d.total} · ${d.accuracy}%</span>
+                </div>
+                <div class="progress"><span style="width:${d.accuracy}%"></span></div>
+              </div>`
+              )
+              .join("");
+          }
+        } catch (err) {
+          document.getElementById("stats").innerHTML =
+            `<div class="card" style="grid-column:1/-1">${err.message}</div>`;
+        }
+      }
+
+      async function loadToday() {
+        const box = document.getElementById("today");
+        try {
+          const { schedules } = await API.listSchedules();
+          const today = new Date().getDay();
+          const list = schedules.filter((s) => s.weekday === today);
+          if (!list.length) {
+            box.innerHTML = `<div class="empty">
+              <div class="empty-ic">📅</div>
+              Nada programado para hoje.<br />
+              <a href="cronograma.html" style="color:var(--primary);font-weight:600">Montar cronograma →</a>
+            </div>`;
+            return;
+          }
+          box.innerHTML = list
+            .map(
+              (s) => `
+            <div class="study-block" style="margin-bottom:.7rem">
+              <b>${esc(s.title)}</b>
+              <span class="time">${s.start_time} – ${s.end_time}</span>
+              ${s.discipline ? `<span class="disc-tag"> · ${esc(s.discipline)}</span>` : ""}
+            </div>`
+            )
+            .join("");
+        } catch (err) {
+          box.innerHTML = `<div class="empty">${err.message}</div>`;
+        }
+      }
+
+      loadStats();
+      loadToday();
+    </script>
+  </body>
+</html>

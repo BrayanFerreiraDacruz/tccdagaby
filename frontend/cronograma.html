@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cronograma · Study Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="mobile-shell"></div>
+    <div class="app">
+      <div id="shell"></div>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <h1>Meu cronograma</h1>
+            <p>Organize sua rotina semanal de estudos e aproveite melhor o tempo.</p>
+          </div>
+          <button class="btn btn-primary" onclick="openModal()">
+            + Novo bloco de estudo
+          </button>
+        </div>
+
+        <div id="week">
+          <div class="loader-center"><span class="loader"></span></div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Modal de criação/edição -->
+    <div class="modal-backdrop" id="modal">
+      <div class="modal">
+        <h3 id="modal-title">Novo bloco de estudo</h3>
+        <div class="error-msg" id="modal-error"></div>
+        <form id="form" onsubmit="return saveBlock(event)">
+          <input type="hidden" name="id" />
+          <div class="field">
+            <label>Título *</label>
+            <input type="text" name="title" required placeholder="Ex.: Revisar funções" />
+          </div>
+          <div class="field">
+            <label>Área / matéria</label>
+            <input type="text" name="discipline" placeholder="Ex.: Matemática" />
+          </div>
+          <div class="field">
+            <label>Dia da semana *</label>
+            <select name="weekday" required>
+              <option value="1">Segunda-feira</option>
+              <option value="2">Terça-feira</option>
+              <option value="3">Quarta-feira</option>
+              <option value="4">Quinta-feira</option>
+              <option value="5">Sexta-feira</option>
+              <option value="6">Sábado</option>
+              <option value="0">Domingo</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Início *</label>
+              <input type="time" name="start_time" required />
+            </div>
+            <div class="field">
+              <label>Término *</label>
+              <input type="time" name="end_time" required />
+            </div>
+          </div>
+          <div class="field">
+            <label>Observações</label>
+            <textarea name="notes" placeholder="Anotações, metas, capítulos..."></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary" id="btn-save">
+              Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+      if (!requireAuth()) throw new Error("redirect");
+      renderShell("cronograma.html");
+
+      let blocks = [];
+
+      async function load() {
+        const week = document.getElementById("week");
+        try {
+          const res = await API.listSchedules();
+          blocks = res.schedules;
+          render();
+        } catch (err) {
+          week.innerHTML = `<div class="empty">${err.message}</div>`;
+        }
+      }
+
+      function render() {
+        // Ordem de colunas: Seg..Dom
+        const order = [1, 2, 3, 4, 5, 6, 0];
+        const week = document.getElementById("week");
+
+        if (!blocks.length) {
+          week.innerHTML = `<div class="card empty">
+            <div class="empty-ic">📅</div>
+            Seu cronograma está vazio.<br />
+            Clique em <strong>“Novo bloco de estudo”</strong> para começar a organizar sua semana.
+          </div>`;
+          return;
+        }
+
+        week.className = "week-grid";
+        week.innerHTML = order
+          .map((day) => {
+            const dayBlocks = blocks
+              .filter((b) => b.weekday === day)
+              .sort((a, b) => a.start_time.localeCompare(b.start_time));
+            const items = dayBlocks
+              .map(
+                (b) => `
+              <div class="study-block" onclick='editBlock(${b.id})'>
+                <b>${esc(b.title)}</b>
+                <span class="time">${b.start_time} – ${b.end_time}</span>
+                ${b.discipline ? `<span class="disc-tag"> · ${esc(b.discipline)}</span>` : ""}
+              </div>`
+              )
+              .join("");
+            return `<div class="day-col">
+              <h4>${WEEKDAYS_SHORT[day]}</h4>
+              ${items || '<p style="text-align:center;color:var(--muted);font-size:.78rem">—</p>'}
+            </div>`;
+          })
+          .join("");
+      }
+
+      const modal = document.getElementById("modal");
+      const form = document.getElementById("form");
+      const modalError = document.getElementById("modal-error");
+
+      function openModal() {
+        form.reset();
+        form.id.value = "";
+        document.getElementById("modal-title").textContent = "Novo bloco de estudo";
+        modalError.classList.remove("show");
+        // remove botão excluir se existir
+        const del = document.getElementById("btn-delete");
+        if (del) del.remove();
+        modal.classList.add("show");
+      }
+
+      function closeModal() {
+        modal.classList.remove("show");
+      }
+
+      function editBlock(id) {
+        const b = blocks.find((x) => x.id === id);
+        if (!b) return;
+        form.id.value = b.id;
+        form.title.value = b.title;
+        form.discipline.value = b.discipline || "";
+        form.weekday.value = b.weekday;
+        form.start_time.value = b.start_time;
+        form.end_time.value = b.end_time;
+        form.notes.value = b.notes || "";
+        document.getElementById("modal-title").textContent = "Editar bloco de estudo";
+        modalError.classList.remove("show");
+
+        if (!document.getElementById("btn-delete")) {
+          const del = document.createElement("button");
+          del.type = "button";
+          del.id = "btn-delete";
+          del.className = "btn btn-danger";
+          del.textContent = "Excluir";
+          del.style.marginRight = "auto";
+          del.onclick = () => deleteBlock(b.id);
+          document.querySelector(".modal-actions").prepend(del);
+        }
+        modal.classList.add("show");
+      }
+
+      async function saveBlock(e) {
+        e.preventDefault();
+        modalError.classList.remove("show");
+        const data = Object.fromEntries(new FormData(form));
+        const id = data.id;
+        delete data.id;
+        data.weekday = parseInt(data.weekday, 10);
+
+        const btn = document.getElementById("btn-save");
+        btn.disabled = true;
+        btn.textContent = "Salvando...";
+        try {
+          if (id) {
+            await API.updateSchedule(id, data);
+            toast("Bloco atualizado!", "ok");
+          } else {
+            await API.createSchedule(data);
+            toast("Bloco adicionado!", "ok");
+          }
+          closeModal();
+          await load();
+        } catch (err) {
+          modalError.textContent = err.message;
+          modalError.classList.add("show");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Salvar";
+        }
+        return false;
+      }
+
+      async function deleteBlock(id) {
+        if (!confirm("Deseja excluir este bloco de estudo?")) return;
+        try {
+          await API.deleteSchedule(id);
+          toast("Bloco removido.", "ok");
+          closeModal();
+          await load();
+        } catch (err) {
+          toast(err.message, "err");
+        }
+      }
+
+      load();
+    </script>
+  </body>
+</html>

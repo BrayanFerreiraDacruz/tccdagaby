@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Desempenho · Study Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div id="mobile-shell"></div>
+    <div class="app">
+      <div id="shell"></div>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <h1>Meu desempenho</h1>
+            <p>Acompanhe seu progresso e descubra onde melhorar.</p>
+          </div>
+          <a href="questoes.html" class="btn btn-primary">Praticar mais →</a>
+        </div>
+
+        <div id="content">
+          <div class="loader-center"><span class="loader"></span></div>
+        </div>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+      if (!requireAuth()) throw new Error("redirect");
+      renderShell("desempenho.html");
+
+      const DISC_LABELS = {
+        matematica: "Matemática",
+        linguagens: "Linguagens",
+        "ciencias-humanas": "C. Humanas",
+        "ciencias-natureza": "C. Natureza",
+        outros: "Outros",
+      };
+
+      function statCard(tone, icon, value, label) {
+        return `<div class="card stat-card">
+          <div class="stat-ic ${tone}">${icon}</div>
+          <div><b>${value}</b><span>${label}</span></div>
+        </div>`;
+      }
+
+      async function load() {
+        const content = document.getElementById("content");
+        try {
+          const [s, h] = await Promise.all([API.summary(), API.history()]);
+
+          if (!s.total) {
+            content.innerHTML = `<div class="card empty">
+              <div class="empty-ic">📊</div>
+              Você ainda não resolveu nenhuma questão.<br />
+              <a href="questoes.html" style="color:var(--primary);font-weight:600">Começar a praticar →</a>
+            </div>`;
+            return;
+          }
+
+          content.innerHTML = `
+            <div class="grid grid-4" style="margin-bottom:1.3rem">
+              ${statCard("tone-primary", "📝", s.total, "Questões resolvidas")}
+              ${statCard("tone-accent", "✓", s.correct, "Acertos")}
+              ${statCard("tone-danger", "✕", s.wrong, "Erros")}
+              ${statCard("tone-warning", "🎯", s.accuracy + "%", "Taxa de acerto")}
+            </div>
+            <div class="grid grid-2" style="margin-bottom:1.3rem">
+              <div class="card">
+                <div class="card-title">Desempenho por área</div>
+                <canvas id="chart" height="220"></canvas>
+              </div>
+              <div class="card">
+                <div class="card-title">Detalhamento por área</div>
+                <div id="disc-list"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">Histórico recente</div>
+              <div id="history"></div>
+            </div>`;
+
+          // Lista de disciplinas
+          document.getElementById("disc-list").innerHTML = s.disciplines
+            .map(
+              (d) => `
+            <div class="disc-row">
+              <div class="disc-head"><b>${d.label}</b><span>${d.correct}/${d.total} · ${d.accuracy}%</span></div>
+              <div class="progress"><span style="width:${d.accuracy}%"></span></div>
+            </div>`
+            )
+            .join("");
+
+          // Gráfico de barras
+          new Chart(document.getElementById("chart"), {
+            type: "bar",
+            data: {
+              labels: s.disciplines.map(
+                (d) => DISC_LABELS[d.discipline] || d.label
+              ),
+              datasets: [
+                {
+                  label: "Taxa de acerto (%)",
+                  data: s.disciplines.map((d) => d.accuracy),
+                  backgroundColor: "#6d5efc",
+                  borderRadius: 8,
+                  maxBarThickness: 46,
+                },
+              ],
+            },
+            options: {
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + "%" } },
+              },
+            },
+          });
+
+          // Histórico
+          const hist = document.getElementById("history");
+          if (!h.history.length) {
+            hist.innerHTML = '<p style="color:var(--muted)">Sem registros.</p>';
+          } else {
+            hist.innerHTML = h.history
+              .map((a) => {
+                const date = new Date(a.answered_at).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                });
+                return `<div style="display:flex;align-items:center;justify-content:space-between;
+                  padding:.7rem 0;border-bottom:1px solid var(--line)">
+                  <div>
+                    <b style="font-size:.92rem">ENEM ${a.year} · Questão ${a.question_index}</b>
+                    <div style="font-size:.8rem;color:var(--muted)">
+                      ${DISC_LABELS[a.discipline] || a.discipline || "—"} · ${date}
+                    </div>
+                  </div>
+                  <span class="chip ${a.is_correct ? "" : "gray"}"
+                    style="${a.is_correct ? "background:#e6faf3;color:var(--accent-dark)" : "background:#ffecec;color:var(--danger)"}">
+                    ${a.is_correct ? "✓ Acertou" : "✕ Errou"} (${a.chosen})
+                  </span>
+                </div>`;
+              })
+              .join("");
+          }
+        } catch (err) {
+          content.innerHTML = `<div class="card empty">${err.message}</div>`;
+        }
+      }
+
+      load();
+    </script>
+  </body>
+</html>

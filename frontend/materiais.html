@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Materiais de apoio · Study Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="mobile-shell"></div>
+    <div class="app">
+      <div id="shell"></div>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <h1>Materiais de apoio</h1>
+            <p>Recursos gratuitos e confiáveis de fontes oficiais para sua preparação.</p>
+          </div>
+        </div>
+        <div id="content">
+          <div class="loader-center"><span class="loader"></span></div>
+        </div>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+      // Materiais são públicos — mas se logado, mostramos o menu lateral.
+      if (Session.isLogged) {
+        renderShell("materiais.html");
+      } else {
+        // Layout simplificado com voltar ao início
+        document.getElementById("shell").innerHTML = `
+          <aside class="sidebar">
+            <a href="index.html" class="brand"><span class="brand-logo">⏱️</span> Study<span>Time</span></a>
+            <nav class="side-nav">
+              <a href="index.html" class="side-link"><span class="ic">🏠</span> Início</a>
+              <a href="materiais.html" class="side-link active"><span class="ic">📚</span> Materiais</a>
+              <a href="auth.html" class="side-link"><span class="ic">🔑</span> Entrar</a>
+            </nav>
+          </aside>`;
+        document.getElementById("mobile-shell").innerHTML = `
+          <div class="mobile-nav">
+            <a href="index.html" class="brand"><span class="brand-logo">⏱️</span> Study<span>Time</span></a>
+            <a href="auth.html" class="btn btn-primary btn-sm">Entrar</a>
+          </div>`;
+      }
+
+      const ICONS = {
+        "file-text": "📄",
+        video: "🎬",
+        pen: "✍️",
+        "check-square": "✅",
+      };
+
+      async function load() {
+        const content = document.getElementById("content");
+        try {
+          const { materials } = await API.materials();
+          content.innerHTML = materials
+            .map(
+              (group) => `
+            <div class="mat-group">
+              <h3>${ICONS[group.icon] || "📌"} ${esc(group.category)}</h3>
+              <div class="mat-list">
+                ${group.items
+                  .map(
+                    (i) => `
+                  <a class="mat-card" href="${i.url}" target="_blank" rel="noopener">
+                    <span class="source">${esc(i.source)}</span>
+                    <h4>${esc(i.title)}</h4>
+                    <p>${esc(i.description)}</p>
+                    <div class="go">Acessar →</div>
+                  </a>`
+                  )
+                  .join("")}
+              </div>
+            </div>`
+            )
+            .join("");
+        } catch (err) {
+          content.innerHTML = `<div class="card empty">${err.message}</div>`;
+        }
+      }
+
+      load();
+    </script>
+  </body>
+</html>

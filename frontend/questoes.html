@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Questões · Study Time</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="mobile-shell"></div>
+    <div class="app">
+      <div id="shell"></div>
+      <main class="main">
+        <div class="topbar">
+          <div>
+            <h1>Questões do ENEM</h1>
+            <p>Questões reais e oficiais das provas (2009–2023) via API ENEM.dev.</p>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card" style="margin-bottom: 1.3rem">
+          <div class="q-filters">
+            <div class="field">
+              <label>Ano da prova</label>
+              <select id="f-year"></select>
+            </div>
+            <div class="field">
+              <label>Área de conhecimento</label>
+              <select id="f-disc">
+                <option value="">Todas</option>
+                <option value="matematica">Matemática</option>
+                <option value="linguagens">Linguagens e Códigos</option>
+                <option value="ciencias-humanas">Ciências Humanas</option>
+                <option value="ciencias-natureza">Ciências da Natureza</option>
+              </select>
+            </div>
+            <div class="field" id="lang-wrap" style="display: none">
+              <label>Idioma (Linguagens)</label>
+              <select id="f-lang">
+                <option value="ingles">Inglês</option>
+                <option value="espanhol">Espanhol</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="startPractice()">
+              Começar
+            </button>
+          </div>
+        </div>
+
+        <!-- Área da questão -->
+        <div id="quiz-area">
+          <div class="empty">
+            <div class="empty-ic">📝</div>
+            Escolha o ano e a área e clique em <strong>Começar</strong> para
+            praticar.
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script>
+      if (!requireAuth()) throw new Error("redirect");
+      renderShell("questoes.html");
+
+      const DISC_LABELS = {
+        matematica: "Matemática",
+        linguagens: "Linguagens e Códigos",
+        "ciencias-humanas": "Ciências Humanas",
+        "ciencias-natureza": "Ciências da Natureza",
+      };
+
+      const state = {
+        year: null,
+        discipline: "",
+        language: null,
+        questions: [],
+        index: 0,
+        offset: 0,
+        answered: false,
+        selected: null,
+        stats: { done: 0, correct: 0 },
+      };
+
+      // Mostra o seletor de idioma apenas para Linguagens
+      document.getElementById("f-disc").addEventListener("change", (e) => {
+        document.getElementById("lang-wrap").style.display =
+          e.target.value === "linguagens" ? "block" : "none";
+      });
+
+      // Carrega anos disponíveis a partir da API oficial
+      async function loadYears() {
+        const sel = document.getElementById("f-year");
+        try {
+          const { exams } = await API.exams();
+          exams.sort((a, b) => b.year - a.year);
+          sel.innerHTML = exams
+            .map((e) => `<option value="${e.year}">${e.title}</option>`)
+            .join("");
+        } catch (err) {
+          sel.innerHTML = "<option>Erro ao carregar</option>";
+          toast(err.message, "err");
+        }
+      }
+
+      async function startPractice() {
+        state.year = document.getElementById("f-year").value;
+        state.discipline = document.getElementById("f-disc").value;
+        state.language =
+          state.discipline === "linguagens"
+            ? document.getElementById("f-lang").value
+            : null;
+        state.offset = 0;
+        state.stats = { done: 0, correct: 0 };
+        await loadBatch();
+      }
+
+      async function loadBatch() {
+        const area = document.getElementById("quiz-area");
+        area.innerHTML =
+          '<div class="loader-center"><span class="loader"></span></div>';
+        try {
+          const params = {
+            year: state.year,
+            limit: 10,
+            offset: state.offset,
+          };
+          if (state.discipline) params.discipline = state.discipline;
+          if (state.language) params.language = state.language;
+
+          const data = await API.questions(params);
+          state.questions = data.questions;
+          state.total = data.metadata.total;
+          state.hasMore = data.metadata.hasMore;
+          state.index = 0;
+          if (!state.questions.length) {
+            area.innerHTML = `<div class="empty"><div class="empty-ic">🔍</div>
+              Nenhuma questão encontrada para este filtro.</div>`;
+            return;
+          }
+          renderQuestion();
+        } catch (err) {
+          area.innerHTML = `<div class="empty"><div class="empty-ic">⚠️</div>${err.message}</div>`;
+        }
+      }
+
+      function renderQuestion() {
+        state.answered = false;
+        state.selected = null;
+        const q = state.questions[state.index];
+        const globalNum = state.offset + state.index + 1;
+
+        const alts = q.alternatives
+          .map(
+            (a) => `
+          <button class="alt" data-letter="${a.letter}" onclick="selectAlt('${a.letter}')">
+            <span class="letter">${a.letter}</span>
+            <span class="alt-text">
+              ${a.text ? esc(a.text) : ""}
+              ${a.file ? `<img src="${a.file}" alt="alternativa ${a.letter}" loading="lazy">` : ""}
+            </span>
+          </button>`
+          )
+          .join("");
+
+        document.getElementById("quiz-area").innerHTML = `
+          <div class="card question-card">
+            <div class="q-meta">
+              <span class="chip">ENEM ${q.year}</span>
+              <span class="chip gray">${DISC_LABELS[q.discipline] || q.discipline || ""}</span>
+              <span class="chip gray">Questão ${q.index}</span>
+            </div>
+            ${q.context ? `<div class="q-context">${renderContext(q.context)}</div>` : ""}
+            ${q.alternativesIntroduction ? `<p class="q-intro">${esc(q.alternativesIntroduction)}</p>` : ""}
+            <div id="alts">${alts}</div>
+            <div id="feedback"></div>
+            <div class="q-actions">
+              <span style="color:var(--muted);font-size:.9rem">
+                Sessão: ${state.stats.correct}/${state.stats.done} acertos
+              </span>
+              <div style="display:flex;gap:.7rem">
+                <button class="btn btn-accent" id="btn-check" onclick="checkAnswer()" disabled>
+                  Responder
+                </button>
+                <button class="btn btn-primary" id="btn-next" onclick="nextQuestion()" style="display:none">
+                  Próxima →
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }
+
+      function selectAlt(letter) {
+        if (state.answered) return;
+        state.selected = letter;
+        document.querySelectorAll(".alt").forEach((el) => {
+          el.classList.toggle("selected", el.dataset.letter === letter);
+        });
+        document.getElementById("btn-check").disabled = false;
+      }
+
+      async function checkAnswer() {
+        if (!state.selected || state.answered) return;
+        const q = state.questions[state.index];
+        const btn = document.getElementById("btn-check");
+        btn.disabled = true;
+        btn.textContent = "Verificando...";
+        try {
+          const res = await API.answer({
+            year: q.year,
+            index: q.index,
+            language: q.language || null,
+            chosen: state.selected,
+          });
+          state.answered = true;
+          state.stats.done++;
+          if (res.is_correct) state.stats.correct++;
+
+          document.querySelectorAll(".alt").forEach((el) => {
+            el.disabled = true;
+            const l = el.dataset.letter;
+            if (l === res.correct) el.classList.add("correct");
+            else if (l === res.chosen) el.classList.add("wrong");
+          });
+
+          document.getElementById("feedback").innerHTML = res.is_correct
+            ? `<div class="feedback ok">✓ Resposta correta! Muito bem.</div>`
+            : `<div class="feedback no">✕ Resposta incorreta. O gabarito é a alternativa ${res.correct}.</div>`;
+
+          btn.style.display = "none";
+          document.getElementById("btn-next").style.display = "inline-flex";
+        } catch (err) {
+          toast(err.message, "err");
+          btn.disabled = false;
+          btn.textContent = "Responder";
+        }
+      }
+
+      async function nextQuestion() {
+        state.index++;
+        if (state.index >= state.questions.length) {
+          if (state.hasMore) {
+            state.offset += 10;
+            await loadBatch();
+          } else {
+            document.getElementById("quiz-area").innerHTML = `
+              <div class="card" style="text-align:center;padding:3rem">
+                <div class="empty-ic" style="font-size:3rem">🎉</div>
+                <h2 style="margin:.5rem 0">Você concluiu esta seleção!</h2>
+                <p style="color:var(--ink-soft);margin-bottom:1.5rem">
+                  Acertos nesta sessão: <strong>${state.stats.correct} de ${state.stats.done}</strong>
+                </p>
+                <div style="display:flex;gap:.8rem;justify-content:center">
+                  <button class="btn btn-primary" onclick="state.offset=0;loadBatch()">Recomeçar</button>
+                  <a href="desempenho.html" class="btn btn-ghost">Ver desempenho</a>
+                </div>
+              </div>`;
+          }
+          return;
+        }
+        renderQuestion();
+      }
+
+      loadYears();
+    </script>
+  </body>
+</html>
