@@ -39,25 +39,26 @@
         // Layout simplificado com voltar ao início
         document.getElementById("shell").innerHTML = `
           <aside class="sidebar">
-            <a href="index.html" class="brand"><span class="brand-logo">⏱️</span> Study<span>Time</span></a>
+            <a href="index.html" class="brand"><span class="brand-logo">${icon("clock", 22)}</span> Study<span>Time</span></a>
+            <p class="side-label">Menu</p>
             <nav class="side-nav">
-              <a href="index.html" class="side-link"><span class="ic">🏠</span> Início</a>
-              <a href="materiais.html" class="side-link active"><span class="ic">📚</span> Materiais</a>
-              <a href="auth.html" class="side-link"><span class="ic">🔑</span> Entrar</a>
+              <a href="index.html" class="side-link"><span class="ic">${icon("home")}</span><span class="lbl">Início</span></a>
+              <a href="materiais.html" class="side-link active"><span class="ic">${icon("book")}</span><span class="lbl">Materiais</span></a>
+              <a href="auth.html" class="side-link"><span class="ic">${icon("key")}</span><span class="lbl">Entrar</span></a>
             </nav>
           </aside>`;
         document.getElementById("mobile-shell").innerHTML = `
           <div class="mobile-nav">
-            <a href="index.html" class="brand"><span class="brand-logo">⏱️</span> Study<span>Time</span></a>
+            <a href="index.html" class="brand"><span class="brand-logo">${icon("clock", 22)}</span> Study<span>Time</span></a>
             <a href="auth.html" class="btn btn-primary btn-sm">Entrar</a>
           </div>`;
       }
 
       const ICONS = {
-        "file-text": "📄",
-        video: "🎬",
-        pen: "✍️",
-        "check-square": "✅",
+        "file-text": "file",
+        video: "video",
+        pen: "pen",
+        "check-square": "check",
       };
 
       async function load() {
@@ -68,7 +69,7 @@
             .map(
               (group) => `
             <div class="mat-group">
-              <h3>${ICONS[group.icon] || "📌"} ${esc(group.category)}</h3>
+              <h3><span class="ic-inline">${icon(ICONS[group.icon] || "book", 18)}</span> ${esc(group.category)}</h3>
               <div class="mat-list">
                 ${group.items
                   .map(

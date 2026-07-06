@@ -56,7 +56,7 @@
         <!-- Área da questão -->
         <div id="quiz-area">
           <div class="empty">
-            <div class="empty-ic">📝</div>
+            <div class="empty-ic" data-ic="questions"></div>
             Escolha o ano e a área e clique em <strong>Começar</strong> para
             praticar.
           </div>
@@ -142,13 +142,13 @@
           state.hasMore = data.metadata.hasMore;
           state.index = 0;
           if (!state.questions.length) {
-            area.innerHTML = `<div class="empty"><div class="empty-ic">🔍</div>
+            area.innerHTML = `<div class="empty"><div class="empty-ic">${icon("search", 40)}</div>
               Nenhuma questão encontrada para este filtro.</div>`;
             return;
           }
           renderQuestion();
         } catch (err) {
-          area.innerHTML = `<div class="empty"><div class="empty-ic">⚠️</div>${err.message}</div>`;
+          area.innerHTML = `<div class="empty"><div class="empty-ic">${icon("alert", 40)}</div>${err.message}</div>`;
         }
       }
 
@@ -253,7 +253,7 @@
           } else {
             document.getElementById("quiz-area").innerHTML = `
               <div class="card" style="text-align:center;padding:3rem">
-                <div class="empty-ic" style="font-size:3rem">🎉</div>
+                <div class="empty-ic">${icon("party", 48)}</div>
                 <h2 style="margin:.5rem 0">Você concluiu esta seleção!</h2>
                 <p style="color:var(--ink-soft);margin-bottom:1.5rem">
                   Acertos nesta sessão: <strong>${state.stats.correct} de ${state.stats.done}</strong>
