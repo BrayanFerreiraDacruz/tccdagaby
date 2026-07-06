@@ -62,8 +62,11 @@ function requireAuth() {
   return true;
 }
 
+const LOGO_MARK =
+  '<span class="brand-logo"><img src="assets/studytime-mark.png" alt="StudyTime" /></span>';
+
 function brandMarkup() {
-  return `<span class="brand-logo">${icon("clock", 22)}</span> Study<span>Time</span>`;
+  return `${LOGO_MARK} Study<span>Time</span>`;
 }
 
 function navLinks(activeHref) {
