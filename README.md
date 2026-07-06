@@ -66,10 +66,12 @@ tccStudyTime/
 
 ## 🌐 Publicar online (Hostinger)
 
-Para colocar no ar em uma hospedagem Hostinger (PHP + MySQL), o projeto inclui
-uma versão do backend em **PHP** (`frontend/api/`), além do Flask. Veja o passo a
-passo completo em **[DEPLOY-HOSTINGER.md](DEPLOY-HOSTINGER.md)** — há inclusive um
-`studytime-public_html.zip` pronto para subir pelo Gerenciador de Arquivos.
+O projeto tem **deploy automático**: cada `git push` publica o site no Hostinger
+via **GitHub Actions (FTP)**. Para isso há uma versão do backend em **PHP**
+(`frontend/api/`), que roda no Hostinger (PHP + MySQL), além do Flask.
+
+Configuração única (segredos de FTP + banco): veja
+**[DEPLOY-HOSTINGER.md](DEPLOY-HOSTINGER.md)**.
 
 > O backend Flask/Python (`backend/`) permanece como implementação oficial do TCC.
 

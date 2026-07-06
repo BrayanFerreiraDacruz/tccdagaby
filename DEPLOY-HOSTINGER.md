@@ -1,98 +1,95 @@
-# 🚀 Como publicar o Study Time no Hostinger
+# 🚀 Deploy automático no Hostinger (a cada commit)
 
-Este guia coloca a plataforma **completa e funcional** no seu domínio Hostinger
-(ex.: `https://forestgreen-gorilla-581996.hostingersite.com/`).
+O projeto está configurado para **publicar sozinho** no Hostinger a cada `git push`
+na branch `main`, usando **GitHub Actions + FTP**.
 
-A hospedagem compartilhada do Hostinger roda **PHP + MySQL**, então o deploy usa
-a **versão PHP do backend** (pasta `frontend/api/`). O backend Flask/Python
-(pasta `backend/`) continua no projeto para o TCC — ele não vai para o Hostinger.
+- Frontend (HTML/CSS/JS) e a **API em PHP** (`frontend/api/`) vão para o `public_html`.
+- O backend Flask/Python (`backend/`) continua no projeto para o TCC — não é enviado.
+- Suas credenciais do banco ficam num arquivo do servidor que o deploy **nunca toca**.
 
-> **Importante:** ninguém além de você consegue subir os arquivos, pois é
-> necessário o login da sua conta Hostinger. Siga os passos abaixo — leva ~10 min.
-
----
-
-## Passo 1 — Criar o banco de dados MySQL
-
-1. Entre no **hPanel** → **Bancos de dados** → **Gerenciamento de bancos MySQL**.
-2. Crie um **novo banco** (ex.: `studytime`). O Hostinger vai gerar nomes com
-   prefixo, por exemplo:
-   - Banco: `u123456789_studytime`
-   - Usuário: `u123456789_admin`
-   - Senha: *(a que você definir)*
-3. **Anote** esses três valores — você vai usá-los no Passo 3.
-
-*(Não precisa criar tabelas: o sistema cria sozinho na primeira execução.)*
+Você configura isto **uma vez**. Depois, todo commit atualiza o site no ar.
 
 ---
 
-## Passo 2 — Enviar os arquivos do site
+## ✅ Configuração inicial (uma vez só, ~10 min)
 
-Você vai subir **o conteúdo da pasta `frontend/`** para a pasta `public_html`.
+### 1. Criar o banco de dados MySQL (hPanel)
+1. hPanel → **Bancos de dados → Gerenciamento de bancos MySQL**.
+2. Crie um banco. Anote **nome, usuário e senha** (o Hostinger usa prefixo, ex.:
+   `u123456789_studytime` / `u123456789_admin`).
 
-**Opção A — Gerenciador de Arquivos (mais fácil):**
-1. hPanel → **Arquivos** → **Gerenciador de Arquivos** → entre em `public_html`.
-2. Faça upload do arquivo **`studytime-public_html.zip`** (está na raiz do projeto).
-3. Clique com o botão direito no zip → **Extrair** (Extract) dentro de `public_html`.
-4. Apague o `.zip` depois de extrair.
+### 2. Pegar os dados de FTP (hPanel)
+1. hPanel → **Arquivos → Contas FTP**.
+2. Anote: **Hostname/IP do FTP**, **usuário FTP** e **senha FTP**.
+   *(Se não tiver senha, use “Alterar senha da conta FTP”.)*
 
-O `public_html` deve ficar assim:
-```
-public_html/
-├── index.html
-├── auth.html
-├── dashboard.html   (e demais .html)
-├── css/  js/  assets/
-└── api/             ← backend PHP
-```
+### 3. Cadastrar os segredos no GitHub
+No repositório: **Settings → Secrets and variables → Actions → New repository secret**.
+Crie **quatro** segredos:
 
-**Opção B — Git (se preferir):**
-No hPanel → **Avançado** → **Git**, conecte o repositório
-`https://github.com/BrayanFerreiraDacruz/tccdagaby.git` e defina o diretório de
-deploy. Depois mova o conteúdo de `frontend/` para dentro de `public_html`.
+| Nome do secret | Valor |
+|----------------|-------|
+| `FTP_HOST` | o hostname do FTP (ex.: `ftp.seudominio.com` ou o IP) |
+| `FTP_USER` | o usuário FTP |
+| `FTP_PASSWORD` | a senha FTP |
+| `FTP_REMOTE_DIR` | `public_html/` *(ou `./` se a conta FTP já abrir dentro do public_html)* |
 
----
+> A senha fica guardada **criptografada no GitHub** — ninguém a vê, nem aparece nos logs.
 
-## Passo 3 — Configurar a conexão com o banco
+### 4. Disparar o primeiro deploy
+Faça qualquer commit (ou vá em **Actions → Deploy para o Hostinger → Run workflow**).
+Acompanhe em **Actions**; quando ficar verde ✅, os arquivos já estão no servidor.
 
-1. No Gerenciador de Arquivos, abra `public_html/api/config.php` (botão direito →
-   **Editar**).
-2. Preencha com os dados do Passo 1:
+### 5. Configurar o banco no servidor (uma vez)
+Como o deploy nunca sobrescreve suas credenciais, crie-as manualmente:
+1. hPanel → **Gerenciador de Arquivos → `public_html/api/`**.
+2. Copie o arquivo **`config.local.sample.php`** para **`config.local.php`**.
+3. Edite `config.local.php` com os dados do banco (passo 1):
    ```php
+   <?php
    define('DB_HOST', 'localhost');
    define('DB_NAME', 'u123456789_studytime');
    define('DB_USER', 'u123456789_admin');
    define('DB_PASS', 'sua_senha_do_banco');
+   define('JWT_SECRET', 'uma-frase-longa-e-aleatoria');
    ```
-3. Troque também a `JWT_SECRET` por uma frase longa e aleatória (qualquer texto
-   grande e único).
-4. Salve.
+
+### 6. Testar 🎉
+- `https://SEU-DOMINIO/api/health` → `{"status":"ok", ...}`
+- `https://SEU-DOMINIO/` → cadastre-se, monte um cronograma, resolva uma questão.
 
 ---
 
-## Passo 4 — Testar
+## 🔁 No dia a dia
 
-1. Acesse `https://SEU-DOMINIO/api/health`
-   → deve responder: `{"status":"ok","service":"Study Time API (PHP)",...}`
-2. Acesse `https://SEU-DOMINIO/` → a plataforma abre.
-3. Crie uma conta, monte um cronograma e resolva uma questão. 🎉
+A partir daqui é só trabalhar normalmente:
 
----
+```bash
+git add .
+git commit -m "minha alteração"
+git push
+```
 
-## Solução de problemas
-
-| Sintoma | Causa provável | Solução |
-|---------|----------------|---------|
-| `500` em `/api/health` | Dados do MySQL errados em `config.php` | Revise DB_NAME/USER/PASS |
-| Página inicial dá 403 | Arquivos não estão em `public_html` (ou faltou o `index.html`) | Reenvie/extraia na pasta certa |
-| Login não funciona | Cabeçalho `Authorization` bloqueado | Confirme que o `api/.htaccess` foi enviado |
-| Questões não carregam | Servidor sem acesso à internet de saída | Raro no Hostinger; contate o suporte |
+O GitHub Actions publica no Hostinger em segundos. Não precisa mexer no hPanel de novo.
 
 ---
 
-## Estrutura no servidor (resumo)
+## 🛠️ Problemas comuns
 
-- **Frontend** (HTML/CSS/JS) → `public_html/`
-- **API PHP** → `public_html/api/` (login, cronograma, questões, desempenho)
-- **Banco** → MySQL do Hostinger (criado no Passo 1)
-- **Questões** → API oficial [ENEM.dev](https://enem.dev) (em tempo real)
+| Sintoma | Causa | Solução |
+|---------|-------|---------|
+| Action falha em “FTP-Deploy” | Segredos de FTP errados/ausentes | Revise `FTP_HOST/USER/PASSWORD` |
+| Deploy ok, mas site dá 404/403 | Pasta errada | Ajuste o secret `FTP_REMOTE_DIR` (`public_html/` ou `./`) |
+| `500` em `/api/health` | Banco não configurado | Crie/edite `public_html/api/config.local.php` (passo 5) |
+| Login não funciona | Cabeçalho `Authorization` bloqueado | Confirme que `api/.htaccess` foi enviado |
+
+---
+
+## 📦 Alternativa: upload manual (sem GitHub Actions)
+
+Se preferir não usar o deploy automático, gere o pacote e suba pelo Gerenciador
+de Arquivos:
+
+1. Compacte o **conteúdo da pasta `frontend/`** em um `.zip`.
+2. hPanel → Gerenciador de Arquivos → `public_html` → envie e **extraia** o zip.
+3. Faça os passos **5** e **6** acima.

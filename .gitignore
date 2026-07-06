@@ -11,6 +11,12 @@ backend/.env
 *.env
 !backend/.env.example
 
+# Credenciais reais do servidor PHP (nunca versionar)
+frontend/api/config.local.php
+
+# Pacote de deploy manual (gerado localmente)
+studytime-public_html.zip
+
 # Banco de dados local (SQLite fallback)
 backend/study_time.db
 *.sqlite3
