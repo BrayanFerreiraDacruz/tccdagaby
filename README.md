@@ -64,7 +64,16 @@ tccStudyTime/
 
 ---
 
-## 🚀 Como executar
+## 🌐 Publicar online (Hostinger)
+
+Para colocar no ar em uma hospedagem Hostinger (PHP + MySQL), o projeto inclui
+uma versão do backend em **PHP** (`frontend/api/`), além do Flask. Veja o passo a
+passo completo em **[DEPLOY-HOSTINGER.md](DEPLOY-HOSTINGER.md)** — há inclusive um
+`studytime-public_html.zip` pronto para subir pelo Gerenciador de Arquivos.
+
+> O backend Flask/Python (`backend/`) permanece como implementação oficial do TCC.
+
+## 🚀 Como executar (local, Flask)
 
 ### Pré-requisitos
 - [Python 3.10+](https://www.python.org/downloads/) instalado

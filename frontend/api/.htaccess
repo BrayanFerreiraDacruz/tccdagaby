@@ -1,0 +1,18 @@
+# Roteia todas as chamadas /api/* para o index.php (front controller)
+RewriteEngine On
+
+# Repassa o cabeçalho Authorization (necessário para o login/JWT)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Se não for um arquivo/pasta real, manda para o index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+# Protege arquivos de configuração
+<FilesMatch "^(config|db|jwt|helpers|enem|materials_data)\.php$">
+    <IfModule mod_authz_core.c>
+        # permitido apenas via include interno; bloqueia acesso direto
+    </IfModule>
+</FilesMatch>
